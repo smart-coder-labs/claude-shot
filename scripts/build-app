@@ -8,6 +8,8 @@ if [ ! -x "$ROOT/.venv/bin/python" ]; then
   printf '%s\n' 'Falta .venv; sigue README.md antes de construir.' >&2
   exit 1
 fi
+# Fallar antes de sobrescribir el ejecutable si falta/expira la identidad configurada.
+"$ROOT/.venv/bin/python" -B "$ROOT/scripts/sign-app.py" --check
 # Cachés y producto de compilación confinados al repositorio.
 CLANG_MODULE_CACHE_PATH="$CACHE" SWIFT_MODULECACHE_PATH="$CACHE" \
   /usr/bin/swiftc -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macosx14.0" \
@@ -24,6 +26,6 @@ printf '%s\n' "$ROOT" > "$APP/Contents/Resources/repository-path.txt"
 /usr/libexec/PlistBuddy -c 'Add :LSMinimumSystemVersion string 14.0' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :NSHighResolutionCapable bool true' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :NSAppleEventsUsageDescription string Claude Shot solicita acceso a iTerm2 para enviar al panel que elijas.' "$APP/Contents/Info.plist"
-/usr/bin/codesign --force --sign - "$APP"
+"$ROOT/.venv/bin/python" -B "$ROOT/scripts/sign-app.py" "$APP"
 printf '\nApp construida (sin abrir): %s\n' "$APP"
 printf 'Para probar: open "%s"\n' "$APP"

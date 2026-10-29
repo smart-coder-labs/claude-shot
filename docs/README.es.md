@@ -43,9 +43,9 @@ Para reconstruir usando el Swift ya instalado (sin descargar dependencias):
 ./scripts/build-app
 ```
 
-El producto y las cachés quedan en `build/`. Firma ad-hoc local, sin notarización ni instalación en `/Applications`. La app depende de este repositorio y su `.venv`; **no es un bundle autónomo distribuible**. Si mueves el repositorio, reconstruye. Compilado en este Mac con Swift 6.3.3, destino macOS 14+ y arquitectura del equipo; no se ha probado en otros sistemas.
+El producto y las cachés quedan en `build/`. Firma ad-hoc por defecto, o certificado estable configurado explícitamente para este checkout; sin notarización ni instalación en `/Applications`. Ver [firma local y permisos que se repiten](local-signing.md). La app depende de este repositorio y su `.venv`; **no es un bundle autónomo distribuible**. Si mueves el repositorio, reconstruye. Compilado en este Mac con Swift 6.3.3, destino macOS 14+ y arquitectura del equipo; no se ha probado en otros sistemas.
 
-Los permisos de captura/Automatización de la app pueden diferir de los de Terminal. Si macOS o iTerm2 los solicita, decide manualmente si los concedes; no se habilitan ni aceptan automáticamente. Inicialmente solo se compiló; después, con autorización del usuario para activar el atajo, se abrió y verificó su registro. No se tomaron capturas ni hicieron envíos para probar la GUI. Consulta [pruebas de escritorio](../tests/manual/desktop.md).
+Los permisos de captura/Automatización de la app pueden diferir de los de Terminal. Si Ajustes muestra permiso activado pero se vuelve a pedir tras recompilar, la firma ad-hoc puede haber cambiado de identidad. Con autorización expresa se configuró un certificado local estable en este Mac; no concede permiso TCC ni prueba que la captura ya funcione. Cada propietario debe autorizar por separado cualquier instalación de certificado/cambio de confianza. Si macOS o iTerm2 los solicita, decide manualmente si los concedes; no se habilitan ni aceptan automáticamente. Inicialmente solo se compiló; después, con autorización del usuario para activar el atajo, se abrió y verificó su registro. No se tomaron capturas ni hicieron envíos para probar la GUI. Consulta [pruebas de escritorio](../tests/manual/desktop.md).
 
 ## Instalación en este repositorio
 

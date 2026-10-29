@@ -13,7 +13,7 @@ P3 automático no está resuelto. La disponibilidad comprobada por el usuario es
 - Texto de una línea sin controles C0/C1, DEL o separadores de línea Unicode. No interpolación del texto en shell; argumentos de procesos mediante listas. Imagen referenciada mediante ruta JSON entre comillas.
 - Copias PNG limitadas en tamaño/dimensiones, firma/chunks/CRC y datos descomprimidos comprobados; no se acepta enlace simbólico final o archivo no regular. Máximo 6 imágenes, 20 MiB por PNG y 60 MiB por lote. Manifiesto privado atómico de nombres internos, sin texto ni rutas de origen.
 - Añadir/quitar/cancelar/enviar comparten bloqueo por operación. Se revalidan todos los PNG del lote antes de un único envío; no hay mensajes independientes por captura ni reintentos parciales.
-- Artefactos privados dentro del repositorio, sin contenido de prompts en recibos. Git ignora `.claude-shot`, `.venv` y `.spike-runtime`.
+- Artefactos privados dentro del repositorio, sin contenido de prompts en recibos. Git ignora `.claude-shot`, `.venv`, `.spike-runtime` y `.local-signing`.
 
 ## Limitaciones
 
@@ -32,6 +32,12 @@ Limpieza explícita y conservadora a partir de 24 h. No hay borrado garantizado 
 La app invoca un puente JSON local por stdin/stdout, sin shell libre, red ni servicio persistente. Captura y envío siguen requiriendo acción del usuario (⌘⌃7 o Capturar en menú y luego Enter/avión en popup), sin pregunta adicional. Descartar solo puede eliminar imágenes no intentadas y comparte bloqueo con enviar. Marcador exclusivo por operación para impedir repetir una tentativa. El puente no exige TTY porque la interacción se hace en la GUI; no es una frontera de seguridad frente a otro proceso del mismo usuario.
 
 Por petición posterior del usuario, el atajo global ⌘⌃7 se registra automáticamente al abrir la app y ahora inicia selección de región directamente por esa pulsación; no envía, no crea preferencias del sistema y puede desactivarse desde el menú. Capturar no exige todavía elegir sesión; Enter/avión en el popup posterior sí exige un destino local válido. El agente abrió la app para verificar el registro autorizado: código 0, sin capturas ni envíos. El diagnóstico del último evento propio del atajo guarda solo enum, PID y código en un archivo privado del repositorio; no registra otras teclas ni contenido. La app puede pedir permisos distintos de la CLI, sujetos a prueba manual y decisión del usuario. Compilación/firma local no demuestra comportamiento real de la UI. Ver `docs/desktop.md`.
+
+## Firma y confianza de código
+
+Los builds no crean certificados ni cambian el llavero, confianza o TCC. Un propietario puede configurar explícitamente una identidad válida por huella completa y llavero; metadata privada 0700/0600. Si falta/caduca, se rechaza el build en lugar de volver silenciosamente a ad-hoc. Se firma sin solicitar timestamp externo; no es notarización ni distribución Developer ID.
+
+Excepción autorizada en este Mac: el propietario aprobó crear/importar una identidad autofirmada local, RSA-3072/SHA-256, clave importada como no extraíble y acceso limitado a `/usr/bin/codesign`. Confianza solo de usuario y política `codeSign`, no SSL ni administración global. Temporales de clave eliminados tras importar; la clave permanece en el llavero. No se exportó ninguna clave existente ni se resetearon permisos. Ver [alcance, diagnóstico y retirada manual](local-signing.md). Verificar una firma estable no demuestra autorización de captura.
 
 ## Fuera de alcance actual
 

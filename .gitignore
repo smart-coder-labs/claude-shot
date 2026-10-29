@@ -3,6 +3,8 @@
 .venv/
 build/
 .claude-shot/
+# Identidad de firma local; nunca publicar certificados/configuración de llavero.
+.local-signing/
 __pycache__/
 *.py[cod]
 .DS_Store

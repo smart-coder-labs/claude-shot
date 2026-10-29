@@ -24,6 +24,8 @@ Compilación/firma y tests del controlador comprobados. El registro real de ⌘�
 - [ ] Renombrar pestaña solo cambia etiqueta. Panel/proceso cerrado no se sustituye automáticamente por otro destino.
 - [ ] Esc descarta imagen y oculta popup sin modificar terminal.
 - [ ] Permisos denegados o error de captura se informan sin envío; decidir permisos manualmente.
+- [ ] Tras migrar a certificado estable: salir/reabrir, autorizar manualmente la identidad nueva y verificar captura real.
+- [ ] Recompilar con el mismo certificado, salir/reabrir y verificar que la autorización sigue válida sin pedirla de nuevo. Identidad de firma estable por sí sola no acredita esta prueba.
 - [ ] Retina y varios monitores producen la región correcta sin incluir el popup.
 
 ## Envío autorizado por Enter/avión

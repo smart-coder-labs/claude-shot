@@ -294,6 +294,16 @@ Backend: manifiesto privado `images.json` con nombres internos validados y escri
 
 **56 pruebas unitarias pasan**, incluidas orden/rutas en una única llamada al adaptador, conservación al cancelar selección o fallar un añadido, eliminación individual, límites, manifiestos inválidos/enlaces, limpieza de lote y CLI múltiple. App recompilada y firma verificada. No se tomaron nuevas capturas ni se enviaron mensajes reales durante esta ampliación. **La interpretación de varias imágenes en un mismo turno sigue pendiente de aceptación real**; las pruebas simuladas no demuestran lectura visual múltiple. Las capturas del README muestran la versión anterior de una imagen y se identifican como tales, sin inventar imágenes de los controles nuevos.
 
+### Aviso de captura pese a permiso activado — firma local estable
+
+El usuario mostró el aviso nativo de grabación de audio/pantalla atribuido a Claude Shot y confirmó que la entrada en Ajustes ya estaba activada. Se comprobó que el proceso correspondía a este bundle y arrancó después de la compilación: no era una instancia previa a ese build. La identidad ad-hoc estaba ligada al `cdhash`; no había identidades válidas de firma de código disponibles. Esto identificó una causa probable de permisos que no siguen una recompilación, no un diagnóstico definitivo del estado TCC.
+
+Con aprobación explícita del propietario se generó/importó un certificado de desarrollo local RSA-3072/SHA-256: uso digitalSignature/codeSigning, clave importada no extraíble, ACL para `/usr/bin/codesign`, confianza en dominio de usuario solo para `codeSign`. Archivos temporales de clave eliminados al terminar. Certificado público y configuración quedan ignorados en `.local-signing/`; ninguna clave/certificado/configuración local se publica. No se tocaron permisos TCC ni diálogos automáticamente.
+
+`build-app` usa ahora el helper `sign-app.py`: ad-hoc por defecto para otros checkouts/CI, o identidad local configurada y validada por huella/llavero. Se comprueba antes de compilar; si falta/expira la identidad configurada, falla sin fallback ad-hoc. Firma sin timestamp externo y verificación estricta. El helper no crea/importa certificados ni modifica confianza.
+
+La app se recompiló y verificó con la nueva identidad, cuyo requisito designado referencia bundle ID y certificado. Dos ejecutables de prueba diferentes se firmaron sin ejecutarlos: distinto hash de código, idéntico requisito designado entre ellos y la app. **64 tests pasan**, incluidos 8 de política de firma, configuración privada y rechazo sin fallback. No se forzó cierre/reinicio de la app, no hubo capturas ni mensajes nuevos. **Pendiente: salir/reabrir la app, autorizar la identidad nueva y verificar captura real, incluida persistencia tras recompilar**. [Procedimiento y límites](local-signing.md).
+
 ## Decisiones originales / alternativas (histórico)
 
 Este apartado conserva las opciones anteriores al acuerdo local supervisado. La autorización y aceptación de lectura por ruta se actualizaron en el apartado precedente; SSH y UX definitiva siguen pendientes.

@@ -84,7 +84,7 @@ open 'build/Claude Shot.app'
 
 The app lives in the **menu bar**, not the Dock. Its shortcut registers automatically at launch. You can disable it or quit from the menu bar icon. It does not install itself globally or start at login.
 
-> This is a development bundle: keep the repository and `.venv` in place. Rebuild after moving them. There is no standalone installer, signed release, or notarized download yet; the build uses a local ad-hoc signature.
+> This is a development bundle: keep the repository and `.venv` in place. Rebuild after moving them. There is no standalone installer, signed release, or notarized download yet. Builds use an ad-hoc signature unless you explicitly configure a stable local signing certificate; see [local signing and repeated permission prompts](docs/local-signing.md).
 
 ### 2. Capture and send
 
@@ -103,7 +103,7 @@ Optional text + ↵     Send once and hide the popup
 
 Capturing does **not** transmit the image. Enter in the popup does. Empty text still sends, with a default request to describe the image. New captures append to the pending batch, preserving order and typed text. Escape in the popup discards the whole unsent batch. Limits: 6 images, 20 MiB per PNG, 60 MiB total. Visual interpretation of multiple files still needs a real acceptance test; automated tests verify the batch protocol, not model behavior.
 
-macOS or iTerm2 may ask for capture or Automation authorization. Decide explicitly whether to grant it; the app does not enable permissions, change system settings, or answer Claude permission dialogs for you.
+macOS or iTerm2 may ask for capture or Automation authorization. Decide explicitly whether to grant it; the app does not enable permissions, change system settings, or answer Claude permission dialogs for you. If Screen Recording already appears enabled but macOS asks again after a rebuild, the ad-hoc signing identity may have changed. [Stable local signing](docs/local-signing.md) addresses identity changes, not permission grants; certificate installation/trust requires separate, explicit owner consent.
 
 ## How it works
 
@@ -156,7 +156,7 @@ Do not clean up while a consumer still needs the image. Read the [security model
 .venv/bin/python -B -m unittest discover -s tests/unit -v
 ```
 
-The controller/bridge suite currently has **56 passing tests**. Native build/signature verification and hotkey registration have also been checked. This is not a claim that every GUI, permission, multi-monitor, broadcast, or remote scenario has passed. Remaining acceptance checks are [listed explicitly](tests/manual/desktop.md).
+The controller/bridge/signing suite currently has **64 passing tests**. Native build/signature verification and hotkey registration have also been checked. This is not a claim that every GUI, permission, multi-monitor, broadcast, or remote scenario has passed. Remaining acceptance checks are [listed explicitly](tests/manual/desktop.md).
 
 ## Documentation
 
