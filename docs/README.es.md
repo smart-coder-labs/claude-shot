@@ -14,7 +14,7 @@ Los hooks no distinguieron prompt vacío, borrador y menú. El usuario aceptó s
 
 Debes comprobar que el destino está inactivo, sin permisos/menús y con el prompt vacío, y no escribir durante la operación. Si confirmas incorrectamente o el estado cambia, el envío puede mezclarse con texto, quedar en cola o accionar un diálogo. No afirmamos haber resuelto P3.
 
-**Solo local, iTerm2, proceso `claude` en primer plano.** No SSH, tmux, reanudación ni cola propia. Hay app nativa SwiftUI y atajo global **⌘⌃7**, activado automáticamente al abrirla por petición del usuario. Texto opcional de una línea y una imagen PNG de 8 bits no entrelazada, hasta 20 MiB y 40 millones de píxeles. No es adjunto nativo: se referencia la copia privada de la imagen. El mensaje contiene la ruta entre comillas y tu texto, sin el prefijo «Analiza visualmente esta imagen local». Si no introduces texto, se añade «Describe lo que ves.». Este formato abreviado todavía requiere validación visual real; no se supone que la ruta por sí sola adjunte la imagen.
+**Solo local, iTerm2, proceso `claude` en primer plano.** No SSH, tmux, reanudación ni cola propia. Hay app nativa SwiftUI y atajo global **⌘⌃7**, activado automáticamente al abrirla por petición del usuario. Texto opcional de una línea y de 1 a 6 PNG de 8 bits no entrelazados: hasta 20 MiB/40 millones de píxeles por imagen y 60 MiB por lote. No es adjunto nativo: se referencia la copia privada de la imagen. El mensaje contiene la ruta entre comillas y tu texto, sin el prefijo «Analiza visualmente esta imagen local». Si no introduces texto, se añade «Describe lo que ves.» para una imagen o «Describe las imágenes.» para un lote. Este formato abreviado todavía requiere validación visual real; no se supone que la ruta por sí sola adjunte la imagen.
 
 ## App de macOS
 
@@ -31,7 +31,7 @@ La app queda en la **barra de menús**, sin ventana inicial ni icono en el Dock.
 3. Elige destino, escribe texto opcional y **Enter envía y oculta el popup**, sin confirmación adicional. El icono de avión hace lo mismo.
 4. **Esc en el popup** descarta la imagen sin tocar Claude. El icono de la barra de menús ofrece mostrar popup, elegir PNG, ver la captura en Finder y salir. La flecha del selector actualiza sesiones.
 
-Si ya hay una captura pendiente, el atajo muestra su popup en lugar de sobrescribirla. Durante la selección una segunda pulsación no abre la app sobre la captura. No se elige un destino remoto ni se envía al capturar. Sin Claude local se conserva la imagen y se pide abrir una sesión local.
+Si ya hay capturas pendientes, otra pulsación de ⌘⌃7 (o el botón +) añade una al mismo lote, conservando orden y texto. El contador muestra hasta 6; cada número × permite quitar esa imagen. Enter envía todas las rutas juntas en un único mensaje, no un mensaje por captura. Esc durante una selección conserva las anteriores; Esc en el popup descarta todo el lote. La lectura visual de varias imágenes en el mismo turno sigue pendiente de prueba real. Durante la selección una segunda pulsación no abre la app sobre la captura. No se elige un destino remoto ni se envía al capturar. Sin Claude local se conserva la imagen y se pide abrir una sesión local.
 
 El foco pasa al campo de texto al preparar la imagen. Después de enviar o de una entrega incierta se deshabilita el reenvío de esa misma operación. Si falla antes de intentar escribir, puedes corregir el destino/texto; nunca hay reintentos automáticos. Los controles se bloquean mientras hay una operación; salir durante un envío no está permitido por la UI. Una terminación forzada puede dejar un resultado incierto.
 
@@ -102,7 +102,13 @@ Solo cuando quieras capturar y potencialmente compartir esa región:
 
 ```sh
 ./scripts/claude-shot capture
+# O capturar 3 regiones antes de escribir/enviar:
+./scripts/claude-shot capture --count 3
+# O enviar PNG existentes juntos:
+./scripts/claude-shot send --image '/ruta/uno.png' --image '/ruta/dos.png'
 ```
+
+En la CLI, Esc durante cualquiera de las selecciones de --count cancela el lote completo sin enviar. En la app, Esc al añadir una región conserva las anteriores.
 
 Selecciona destino: el selector nativo se abre directamente, sin otra pregunta. Arrastra la región o pulsa Esc para cancelar. El comando usa `/usr/sbin/screencapture -i -s` y no toca el portapapeles. Si macOS solicita permiso de grabación/captura, decide manualmente si lo concedes. El usuario confirmó que la captura funciona en este Mac. Denegación de permisos, Retina y múltiples monitores siguen pendientes de pruebas específicas.
 

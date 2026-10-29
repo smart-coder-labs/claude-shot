@@ -3,7 +3,7 @@
 | File | Provenance |
 | --- | --- |
 | `claude-shot-banner.svg` | Original decorative cover artwork, not a screenshot or simulated UI. |
-| `claude-shot-popup.png` | Real Claude Shot app-window capture, taken with the user's permission via macOS `screencapture -x -o -l <window-id>`. It shows the existing popup after a local send; no new message was sent to create it. |
+| `claude-shot-popup.png` | Real Claude Shot app-window capture of the single-image UI (before batch controls), taken with the user's permission via macOS `screencapture -x -o -l <window-id>`. It shows the existing popup after a local send; no new message was sent to create it. |
 | `session-selector-detail.png` | Crop of that same screenshot, not another application state. |
 | `social-preview.png` | Decorative social card containing the real popup screenshot. Ready for manual selection as a GitHub social preview. |
 

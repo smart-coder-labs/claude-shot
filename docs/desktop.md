@@ -14,8 +14,9 @@ JSON por stdin, máximo 64 KiB; EOF cierra la petición. JSON único por stdout,
 Acciones permitidas:
 
 - `sessions`: inventario de destinos locales, incluido título como etiqueta e identidad PID/TTY/arranque/ID.
-- `prepare` con `path`: valida/copia un PNG local, devuelve ID de operación y ruta privada.
-- `capture`: abre selección nativa por acción del usuario; prepara copia o devuelve `cancelled`. Nunca transmite.
+- `prepare` con `path`: valida/copia un PNG local; si se incluye `operation`, añade al lote existente. Devuelve ID y `image_paths` en orden, con `image_path` de la última por compatibilidad.
+- `capture`: abre selección nativa por acción del usuario; crea lote o añade al indicado. Esc devuelve `capture_cancelled` y preserva imágenes previas; sin imágenes devuelve `cancelled`. Nunca transmite.
+- `remove` con `operation` e `index` (desde 0): elimina una imagen no intentada y actualiza orden. Quitar la última cancela el lote.
 - `send` con operación, snapshot de identidad y texto: valida identidad/imagen/texto y llama al adaptador sin reintentos. Solo permite una tentativa por operación.
 - `cancel`: elimina imagen únicamente si la escritura no se ha intentado.
 
@@ -23,7 +24,7 @@ La UI no expone el puente como opción de automatización desatendida y no acept
 
 ## Exclusión y errores
 
-La UI bloquea controles durante cada petición. El flujo gráfico es captura → popup compacto de sesión/texto → Enter/avión → ocultar popup; no hay ventana inicial ni vista previa grande. Esc durante la captura no muestra popup; Esc después descarta la imagen. Una captura pendiente no se sobrescribe: el atajo la muestra. La lista se consulta al arrancar y actualiza después de capturar; no se exige destino para iniciar selección de región. El backend usa bloqueo por operación y por destino; un marcador exclusivo `attempted` impide duplicar entregas incluso si dos peticiones apuntan a paneles diferentes. Cancelación y envío comparten bloqueo por operación. Un marcador sin recibo final se trata como incierto y nunca se reenvía automáticamente. La limpieza reconoce ese marcador solo en operaciones finalizadas y antiguas.
+La UI bloquea controles durante cada petición. El flujo gráfico es captura → popup compacto de sesión/texto → Enter/avión → ocultar popup; no hay ventana inicial ni vista previa grande. Esc durante la primera captura no muestra popup; al añadir captura devuelve el popup con las previas intactas. Esc en el popup descarta el lote completo. Repetir el atajo o pulsar + añade captura al lote, sin sobrescribir ni borrar texto; números × quitan imágenes. Se admiten 6 imágenes, 20 MiB por imagen y 60 MiB por lote. La lista se consulta al arrancar y actualiza después de capturar; no se exige destino para iniciar selección de región. El backend usa bloqueo por operación y por destino; un marcador exclusivo `attempted` impide duplicar entregas incluso si dos peticiones apuntan a paneles diferentes. Añadir/quitar/cancelar/enviar comparten bloqueo por operación. `images.json` privado enumera solo nombres internos validados, sin rutas de origen ni texto. Actualización atómica del manifiesto; un fallo al añadir elimina solo la copia nueva. Antes de enviar se revalidan todos los PNG y el límite agregado. Una sola llamada al adaptador envía todos los paths en un mensaje, seguida de un único Enter. No hay bucle de envíos por imagen. Un marcador sin recibo final se trata como incierto y nunca se reenvía automáticamente. La limpieza reconoce ese marcador solo en operaciones finalizadas y antiguas.
 
 Identidad cambiante se rechaza; renombrar pestañas no cambia identidad. No se detecta automáticamente editor vacío, menús o permisos. La confirmación es Enter/Enviar después del aviso visible, conforme al alcance aceptado.
 
@@ -37,7 +38,7 @@ No se lanza captura al abrir la app. **El atajo ⌘⌃7 sí activa directamente 
 
 El backend de captura y la autorización SDK pueden tener atribución de permisos distinta de la CLI en Terminal. El usuario debe probar y decidir en los diálogos nativos. No se cambia TCC, confianza de carpetas, API iTerm2 ni configuración global. Firma local ad-hoc; recompilar puede causar nuevas preguntas de autorización. No se deshabilita Gatekeeper ni se promete notarización.
 
-Salir normalmente descarta una imagen preparada; durante una petición en curso la app pide esperar mediante su estado, sin interrumpirla. Cerrar la ventana no equivale necesariamente a terminar el proceso. Cierre forzado, errores o desconexión pueden dejar artefactos privados; retención y limpieza explícitas como en la CLI.
+Salir normalmente descarta el lote preparado; durante una petición en curso la app pide esperar mediante su estado, sin interrumpirla. Cerrar la ventana no equivale necesariamente a terminar el proceso. Cierre forzado, errores o desconexión pueden dejar artefactos privados; retención y limpieza explícitas como en la CLI.
 
 ## Validación
 

@@ -9,8 +9,9 @@ import stat
 import subprocess
 import sys
 
-from .core import (ShotError, Target, discover, message, operation, read_image,
-                   receipt, revalidate, runtime, stage_image, target_lock)
+from .core import (MAX_BATCH, MAX_IMAGES, ShotError, Target, append_image, atomic_json,
+                   discard_images, discover, image_paths, message, operation, read_image,
+                   receipt, revalidate, runtime, target_lock)
 from .iterm_adapter import send
 
 
@@ -62,41 +63,70 @@ def cancel(op):
 def _cancel(op):
     if operation_state(op) != 'preparing' or (op / 'attempted').exists():
         raise DesktopError('La escritura pudo comenzar; no se cancela ni elimina la imagen.')
-    for name in ('image.png', 'capture.png'):
-        (op / name).unlink(missing_ok=True)
+    discard_images(op)
     receipt(op, 'cancelled')
     return {'state': 'cancelled', 'operation': op.name}
 
 
+def batch_reply(op, state='prepared'):
+    paths = image_paths(op)
+    return {'state': state, 'operation': op.name, 'image_paths': list(map(str, paths)),
+            'image_path': str(paths[-1]) if paths else None, 'count': len(paths), 'max_images': MAX_IMAGES}
+
+
 def prepare(request):
-    op = operation()
-    source = None
-    try:
-        if request['action'] == 'capture':
-            source = op / 'capture.png'
-            try:
-                result = subprocess.run(['/usr/sbin/screencapture', '-i', '-s', '-t', 'png', str(source)],
-                                        capture_output=True, timeout=180)
-            except subprocess.TimeoutExpired:
-                return cancel(op)
-            if result.returncode or not source.exists() or source.stat().st_size == 0:
-                return cancel(op)
-            os.chmod(source, 0o600)
-        else:
-            value = request.get('path')
-            if not isinstance(value, str) or not value:
-                raise DesktopError('Elige un PNG local.')
-            source = Path(value).absolute()
-        image = stage_image(source, op)
-        if request['action'] == 'capture':
-            source.unlink()
-        return {'state': 'prepared', 'operation': op.name, 'image_path': str(image)}
-    except Exception:
-        if request['action'] == 'capture' and source is not None:
-            source.unlink(missing_ok=True)
-        (op / 'image.png').unlink(missing_ok=True)
-        receipt(op, 'failed')
-        raise
+    existing = request.get('operation') is not None
+    op = get_operation(request['operation']) if existing else operation()
+    with target_lock(Target('operation:' + op.name, '', 0, '')):
+        if operation_state(op) != 'preparing' or (op / 'attempted').exists():
+            raise DesktopError('El lote ya se intentó; no se puede modificar.')
+        if len(image_paths(op)) >= MAX_IMAGES:
+            raise DesktopError('Máximo 6 capturas por mensaje.')
+        source = None
+        try:
+            if request['action'] == 'capture':
+                source = op / 'capture.png'
+                try:
+                    result = subprocess.run(['/usr/sbin/screencapture', '-i', '-s', '-t', 'png', str(source)],
+                                            capture_output=True, timeout=180)
+                except subprocess.TimeoutExpired:
+                    source.unlink(missing_ok=True)
+                    return batch_reply(op, 'capture_cancelled') if image_paths(op) else _cancel(op)
+                if result.returncode or not source.exists() or source.stat().st_size == 0:
+                    source.unlink(missing_ok=True)
+                    return batch_reply(op, 'capture_cancelled') if image_paths(op) else _cancel(op)
+                os.chmod(source, 0o600)
+            else:
+                value = request.get('path')
+                if not isinstance(value, str) or not value:
+                    raise DesktopError('Elige un PNG local.')
+                source = Path(value).absolute()
+            append_image(source, op)
+            if request['action'] == 'capture':
+                source.unlink()
+            return batch_reply(op)
+        except Exception:
+            if request['action'] == 'capture' and source is not None:
+                source.unlink(missing_ok=True)
+            if not existing:
+                discard_images(op)
+                receipt(op, 'failed')
+            raise
+
+
+def remove(request):
+    op = get_operation(request.get('operation'))
+    with target_lock(Target('operation:' + op.name, '', 0, '')):
+        if operation_state(op) != 'preparing' or (op / 'attempted').exists():
+            raise DesktopError('No se puede modificar un lote intentado.')
+        paths = image_paths(op)
+        index = request.get('index')
+        if type(index) is not int or not 0 <= index < len(paths):
+            raise DesktopError('Índice de captura inválido.')
+        removed = paths.pop(index)
+        atomic_json(op / 'images.json', [p.name for p in paths])
+        removed.unlink()
+        return batch_reply(op) if paths else _cancel(op)
 
 
 def submit(request):
@@ -112,9 +142,11 @@ def _submit(request, op):
     text = request.get('text', '')
     if not isinstance(text, str):
         raise DesktopError('Texto inválido.')
-    image = op / 'image.png'
-    read_image(image)  # No consumir imágenes modificadas sin validación.
-    prompt = message(image, text)
+    images = image_paths(op)
+    total = sum(len(read_image(image)) for image in images)
+    if total > MAX_BATCH:
+        raise DesktopError('El lote supera 60 MiB.')
+    prompt = message(images, text)
     with target_lock(target):
         revalidate(target)
         # Exclusión por operación aunque dos peticiones elijan paneles distintos.
@@ -144,6 +176,8 @@ def handle(request):
         return submit(request)
     if action == 'cancel':
         return cancel(get_operation(request.get('operation')))
+    if action == 'remove':
+        return remove(request)
     raise DesktopError('Operación no permitida.')
 
 
@@ -161,7 +195,7 @@ def main():
     except Exception as exc:
         response = {'ok': False, 'error': str(exc) if isinstance(exc, ShotError)
                     else 'Falló el controlador local. Comprueba permisos y el panel; no reintentes a ciegas.'}
-        if isinstance(request, dict) and request.get('action') == 'send':
+        if isinstance(request, dict) and request.get('action') in ('send', 'prepare', 'capture', 'remove') and request.get('operation'):
             response['state'] = 'unknown'
             try:
                 op = get_operation(request.get('operation'))
@@ -169,6 +203,8 @@ def main():
                 if state == 'preparing' and (op / 'attempted').exists():
                     state = 'uncertain'
                 response.update(state=state, operation=op.name)
+                if state == 'preparing' and request.get('action') != 'send':
+                    response.update(batch_reply(op, state))
             except Exception:
                 pass
     print(json.dumps(response))

@@ -11,7 +11,8 @@ P3 automático no está resuelto. La disponibilidad comprobada por el usuario es
 - SDK oficial, `suppress_broadcast=True` en texto y Enter, sin fallback al panel activo ni reintentos.
 - Exclusión por panel entre instancias de esta herramienta mediante `flock`. No excluye teclado, otras apps ni otros emisores.
 - Texto de una línea sin controles C0/C1, DEL o separadores de línea Unicode. No interpolación del texto en shell; argumentos de procesos mediante listas. Imagen referenciada mediante ruta JSON entre comillas.
-- Copia de PNG limitada en tamaño/dimensiones, firma/chunks/CRC y datos descomprimidos comprobados; no se acepta enlace simbólico final o archivo no regular.
+- Copias PNG limitadas en tamaño/dimensiones, firma/chunks/CRC y datos descomprimidos comprobados; no se acepta enlace simbólico final o archivo no regular. Máximo 6 imágenes, 20 MiB por PNG y 60 MiB por lote. Manifiesto privado atómico de nombres internos, sin texto ni rutas de origen.
+- Añadir/quitar/cancelar/enviar comparten bloqueo por operación. Se revalidan todos los PNG del lote antes de un único envío; no hay mensajes independientes por captura ni reintentos parciales.
 - Artefactos privados dentro del repositorio, sin contenido de prompts en recibos. Git ignora `.claude-shot`, `.venv` y `.spike-runtime`.
 
 ## Limitaciones
@@ -34,4 +35,4 @@ Por petición posterior del usuario, el atajo global ⌘⌃7 se registra automá
 
 ## Fuera de alcance actual
 
-SSH y auxiliar remoto, distribución autónoma/notarizada, atajo configurable/persistente, registro por wrapper, texto multilínea, múltiples imágenes, reanudación e historial. No se finge soporte de estos casos.
+SSH y auxiliar remoto, distribución autónoma/notarizada, atajo configurable/persistente, registro por wrapper, texto multilínea, reanudación e historial. El protocolo de múltiples imágenes está implementado; su interpretación real en un mismo turno aún necesita aceptación manual. No se finge soporte de estos casos.

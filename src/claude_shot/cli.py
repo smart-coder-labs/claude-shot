@@ -9,8 +9,9 @@ import sys
 import time
 
 from . import __version__
-from .core import (ROOT, RUNTIME, ShotError, discover, message, operation, receipt,
-                   revalidate, runtime, stage_image, target_lock)
+from .core import (IMAGE_NAME, MAX_IMAGES, ROOT, RUNTIME, ShotError, append_image,
+                   discard_images, discover, image_paths, message, operation, receipt,
+                   revalidate, runtime, target_lock)
 from .iterm_adapter import send
 
 
@@ -70,8 +71,8 @@ def cleanup(hours):
             if time.time() - rec_info.st_mtime < hours * 3600:
                 continue
             files = list(op.iterdir())
-            if any(p.name not in ('receipt.json', 'image.png', 'capture.png', 'attempted') or p.is_symlink()
-                   or not p.is_file() for p in files):
+            if any((p.name not in ('receipt.json', 'capture.png', 'attempted', 'images.json')
+                    and not IMAGE_NAME.fullmatch(p.name)) or p.is_symlink() or not p.is_file() for p in files):
                 continue
             for path in files:
                 path.unlink()
@@ -90,39 +91,47 @@ def workflow(args):
     if target is None:
         print('Cancelado; sin cambios en la terminal.')
         return
-    source = Path(args.image).absolute() if args.command == 'send' else None
+    sources = args.image if args.command == 'send' else [None] * getattr(args, 'count', 1)
+    if isinstance(sources, str):
+        sources = [sources]  # Compatibilidad con invocaciones internas antiguas.
+    if not 1 <= len(sources) <= MAX_IMAGES:
+        raise ShotError('El lote requiere entre 1 y 6 capturas.')
     op = operation()
     print(f'Operación: {op.name}')
     try:
-        if source is None:
-            print('Selecciona una región de pantalla; Esc cancela sin enviar.')
-            source = op / 'capture.png'
-            try:
-                captured = subprocess.run(['/usr/sbin/screencapture', '-i', '-s', '-t', 'png', str(source)],
-                                          capture_output=True, timeout=180)
-            except subprocess.TimeoutExpired:
-                receipt(op, 'cancelled')
-                source.unlink(missing_ok=True)
-                raise ShotError('Captura cancelada por tiempo; sin envío.') from None
-            if captured.returncode or not source.exists() or source.stat().st_size == 0:
-                source.unlink(missing_ok=True)
-                receipt(op, 'cancelled')
-                print('Captura cancelada o permiso no disponible; sin envío.')
-                return
-            os.chmod(source, 0o600)
-        image = stage_image(source, op)
-        if args.command == 'capture':
-            source.unlink()
-        message(image, args.text or '')  # Valida --text antes de mostrarlo en terminal.
+        for index, value in enumerate(sources, 1):
+            source = Path(value).absolute() if value is not None else op / 'capture.png'
+            if value is None:
+                print(f'Captura {index}/{len(sources)}: selecciona región; Esc cancela el lote sin enviar.')
+                try:
+                    captured = subprocess.run(['/usr/sbin/screencapture', '-i', '-s', '-t', 'png', str(source)],
+                                              capture_output=True, timeout=180)
+                except subprocess.TimeoutExpired:
+                    discard_images(op)
+                    receipt(op, 'cancelled')
+                    raise ShotError('Captura cancelada por tiempo; sin envío.') from None
+                if captured.returncode or not source.exists() or source.stat().st_size == 0:
+                    discard_images(op)
+                    receipt(op, 'cancelled')
+                    print('Captura cancelada o permiso no disponible; sin envío.')
+                    return
+                os.chmod(source, 0o600)
+            append_image(source, op)
+            if value is None:
+                source.unlink()
+        images = image_paths(op)
+        message(images, args.text or '')  # Valida --text antes de mostrarlo en terminal.
         print(f'Destino: {target_label(target)}')
-        print(f'Imagen: {image}')
+        print(f'Imágenes: {len(images)}')
+        for image in images:
+            print(f'  {image}')
         print(WARNING)
         if args.text is not None:
             print(f'Texto predefinido: {args.text}')
         text = input('Texto opcional (una línea; Enter envía): ')
         if not text and args.text is not None:
             text = args.text
-        prompt = message(image, text)
+        prompt = message(images, text)
         with target_lock(target):
             revalidate(target)
             send(target, prompt, op)
@@ -130,8 +139,7 @@ def workflow(args):
     except (KeyboardInterrupt, EOFError):
         state = json.loads((op / 'receipt.json').read_text())['state']
         if state == 'preparing':
-            for name in ('image.png', 'capture.png'):
-                (op / name).unlink(missing_ok=True)
+            discard_images(op)
             receipt(op, 'cancelled')
             print('Cancelado; terminal intacta.')
             return
@@ -158,7 +166,10 @@ def main():
     for name in ('send', 'capture'):
         action = sub.add_parser(name)
         if name == 'send':
-            action.add_argument('--image', required=True)
+            action.add_argument('--image', required=True, action='append', help='PNG; repetir para enviar un lote')
+        else:
+            action.add_argument('--count', type=int, choices=range(1, MAX_IMAGES + 1), default=1,
+                                help='Cantidad de regiones a capturar antes de enviar (1–6)')
         action.add_argument('--session', help='ID explícito; omitir abre selector interactivo')
         action.add_argument('--text', help='Texto opcional de una sola línea')
     args = parser.parse_args()

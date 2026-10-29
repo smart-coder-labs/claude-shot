@@ -38,7 +38,7 @@ No big editor. No extra confirmation dialog. No clipboard changes.
   <img src=".github/assets/claude-shot-popup.png" alt="Real Claude Shot macOS popup with an iTerm2 Claude Code session selector, optional text input, refresh control, and send button" width="680" />
 </p>
 
-<p align="center"><em>Actual app-window screenshot after a local send, captured on the development Mac. The current interface is in Spanish. No terminal or full-desktop screenshot is included.</em></p>
+<p align="center"><em>Real app-window screenshot of the single-image version after a local send, captured on the development Mac. The newer batch build adds a compact capture counter and remove/add controls. The current interface is in Spanish. No terminal or full-desktop screenshot is included.</em></p>
 
 <details>
 <summary><strong>Session selector detail</strong></summary>
@@ -59,6 +59,7 @@ The tab title makes sessions easier to recognize. Underneath, routing uses the p
 | ◉ | **Keep your conversation** | Send to an already-open local Claude Code process in iTerm2. |
 | ↗ | **Choose the right session** | Recognize tab titles, with TTY/PID to distinguish similar sessions. |
 | ↵ | **Send with Enter** | Add optional single-line text in a small popup; no `ENVIAR` confirmation. |
+| ▤ | **Send a capture batch** | Repeat the shortcut or press + to collect up to 6 images; Enter sends all paths in one message. |
 | ⎋ | **Cancel without terminal edits** | Escape cancels region selection or discards the prepared image. |
 | ◇ | **Leave the clipboard alone** | Store a private PNG and reference it by path instead of clipboard paste. |
 | ⛨ | **Avoid accidental duplication** | Per-session locking, destination revalidation, broadcast suppression, and no automatic delivery retries. |
@@ -96,11 +97,11 @@ Optional text + ↵     Send once and hide the popup
 ```
 
 1. Open **Claude Code locally in iTerm2**. Leave it idle with an empty prompt.
-2. Press **Command + Control + 7** and select a region. Press Escape to cancel.
-3. Choose Claude in the popup, type optional text, and press **Enter** or the paper-plane button.
+2. Press **Command + Control + 7** and select a region. Repeat the shortcut or press **+** in the popup to add more (up to 6). Escape during a selection cancels only that selection and preserves earlier captures.
+3. Remove an unwanted image with its numbered **×** control. Choose Claude, type optional text, and press **Enter** or the paper-plane button to send the entire batch in **one message**.
 4. Check the response in Claude. An iTerm2 delivery acknowledgment is not proof of visual interpretation.
 
-Capturing does **not** transmit the image. Enter in the popup does. Empty text still sends, with a default request to describe the image. A pending capture is preserved rather than silently overwritten.
+Capturing does **not** transmit the image. Enter in the popup does. Empty text still sends, with a default request to describe the image. New captures append to the pending batch, preserving order and typed text. Escape in the popup discards the whole unsent batch. Limits: 6 images, 20 MiB per PNG, 60 MiB total. Visual interpretation of multiple files still needs a real acceptance test; automated tests verify the batch protocol, not model behavior.
 
 macOS or iTerm2 may ask for capture or Automation authorization. Decide explicitly whether to grant it; the app does not enable permissions, change system settings, or answer Claude permission dialogs for you.
 
@@ -115,7 +116,7 @@ flowchart LR
   Panel --> Claude["Existing Claude Code conversation"]
 ```
 
-The SwiftUI app communicates with the local controller through **JSON on stdin/stdout**, not user-text shell commands. The controller keeps a private PNG, revalidates the target process, and sends text and Enter in separate calls using the official iTerm2 SDK with `suppress_broadcast=True`.
+The SwiftUI app communicates with the local controller through **JSON on stdin/stdout**, not user-text shell commands. The controller keeps private PNGs in capture order, revalidates the target process, and sends a single text message referencing all images plus one Enter in separate calls using the official iTerm2 SDK with `suppress_broadcast=True`.
 
 **This is file-based visual reading, not a native attachment API.** The message contains a quoted local image path and your text. A path alone must not be treated as evidence of an attachment. Local visual reading and delivery were confirmed during the [feasibility spike](docs/spike-results.md).
 
@@ -124,8 +125,8 @@ The SwiftUI app communicates with the local controller through **JSON on stdin/s
 | Supported now | Not supported / not guaranteed |
 | --- | --- |
 | Local Claude Code in iTerm2 | SSH, tmux, containers, or other terminals |
-| One PNG; optional single-line text | Multiple images or multiline text |
-| PNG up to 20 MiB / 40 million pixels | Arbitrary image formats; interlaced or non-8-bit PNG |
+| 1–6 PNGs in one message; optional single-line text | Multiline text; automatic guarantee that Claude reads every file |
+| PNG up to 20 MiB / 40 million pixels; 60 MiB per batch | Arbitrary image formats; interlaced or non-8-bit PNG |
 | Destination identity checks | Automatic detection of empty prompts, menus, or readiness |
 | Explicit Enter/Send action | Safe unattended delivery or automatic retries |
 | Private repository-local storage | Cloud storage, automatic consumption acknowledgments, or guaranteed timed deletion |
@@ -146,15 +147,16 @@ Do not clean up while a consumer still needs the image. Read the [security model
 ./scripts/claude-shot doctor
 ./scripts/claude-shot sessions
 ./scripts/claude-shot capture
+./scripts/claude-shot capture --count 3
 
-# Send an existing PNG; interactive text input + Enter authorize delivery.
-./scripts/claude-shot send --image '/path/to/image.png'
+# Multiple PNGs, one message; text input + Enter authorize delivery.
+./scripts/claude-shot send --image '/path/to/first.png' --image '/path/to/second.png'
 
 # Tests use simulated adapters; they do not capture or send to real sessions.
 .venv/bin/python -B -m unittest discover -s tests/unit -v
 ```
 
-The controller/bridge suite currently has **45 passing tests**. Native build/signature verification and hotkey registration have also been checked. This is not a claim that every GUI, permission, multi-monitor, broadcast, or remote scenario has passed. Remaining acceptance checks are [listed explicitly](tests/manual/desktop.md).
+The controller/bridge suite currently has **56 passing tests**. Native build/signature verification and hotkey registration have also been checked. This is not a claim that every GUI, permission, multi-monitor, broadcast, or remote scenario has passed. Remaining acceptance checks are [listed explicitly](tests/manual/desktop.md).
 
 ## Documentation
 

@@ -286,6 +286,14 @@ Se añadieron CI de tests/build/documentación, formulario de issues y guía de 
 
 La tarjeta social queda preparada como archivo: no se afirma que se haya configurado la opción Social preview de GitHub, no expuesta por el actualizador de API. No se eligió licencia por el propietario ni se inventó una. No se cambia el gate de SSH ni se dan por probados los permisos/monitores/flujo gráfico por haber capturado el popup. Ver `discoverability.md`.
 
+### Lotes de varias capturas — implementación, pendiente de prueba visual real
+
+El usuario solicitó tomar varias capturas y enviarlas juntas. Se amplió el flujo local a hasta **6 PNG por lote**, **20 MiB por archivo / 60 MiB total**. Cada pulsación de ⌘⌃7 o + añade una imagen a la misma operación y preserva el texto; el popup muestra contador y controles numerados × para quitar imágenes. Esc durante una selección adicional conserva el lote previo; Esc en popup lo descarta entero. Enter/avión construye **un único mensaje con todas las rutas en orden y un solo Enter final**, no varios envíos paralelos ni un turno por captura.
+
+Backend: manifiesto privado `images.json` con nombres internos validados y escritura atómica. Añadir/quitar/cancelar/enviar comparten bloqueo de operación; rollback de la copia nueva si falla o supera límites. Antes de enviar se revalida cada PNG y tamaño agregado; no se permite editar/reintentar un lote intentado. CLI acepta `send --image A --image B` y `capture --count N` (en CLI, Esc durante --count cancela el lote entero).
+
+**56 pruebas unitarias pasan**, incluidas orden/rutas en una única llamada al adaptador, conservación al cancelar selección o fallar un añadido, eliminación individual, límites, manifiestos inválidos/enlaces, limpieza de lote y CLI múltiple. App recompilada y firma verificada. No se tomaron nuevas capturas ni se enviaron mensajes reales durante esta ampliación. **La interpretación de varias imágenes en un mismo turno sigue pendiente de aceptación real**; las pruebas simuladas no demuestran lectura visual múltiple. Las capturas del README muestran la versión anterior de una imagen y se identifican como tales, sin inventar imágenes de los controles nuevos.
+
 ## Decisiones originales / alternativas (histórico)
 
 Este apartado conserva las opciones anteriores al acuerdo local supervisado. La autorización y aceptación de lectura por ruta se actualizaron en el apartado precedente; SSH y UX definitiva siguen pendientes.

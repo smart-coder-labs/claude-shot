@@ -25,9 +25,10 @@ struct Reply: Decodable {
     let state: String?
     let operation: String?
     let imagePath: String?
+    let imagePaths: [String]?
     enum CodingKeys: String, CodingKey {
         case ok, error, sessions, state, operation
-        case imagePath = "image_path"
+        case imagePath = "image_path", imagePaths = "image_paths"
     }
 }
 
@@ -36,8 +37,8 @@ final class Model: ObservableObject {
     @Published var sessions: [Session] = []
     @Published var selected = ""
     @Published var text = ""
-    @Published var image: NSImage?
     @Published var imagePath: String?
+    @Published var imagePaths: [String] = []
     @Published var operation: String?
     @Published var busy = false
     @Published var status = "Selecciona una sesión local de Claude Code."
@@ -58,7 +59,7 @@ final class Model: ObservableObject {
     }
 
     var currentSession: Session? { sessions.first { $0.id == selected } }
-    var canSend: Bool { !busy && operation != nil && currentSession != nil }
+    var canSend: Bool { !busy && operation != nil && !imagePaths.isEmpty && currentSession != nil }
 
     // Protocolo de una petición JSON por proceso. Sin shell ni interpolación de texto.
     private func request(_ payload: [String: Any], completion: @escaping (Reply?) -> Void) {
@@ -137,8 +138,8 @@ final class Model: ObservableObject {
             if !capturing { showWindow() }
             return
         }
-        if operation != nil {
-            status = "Hay una captura pendiente. Enter envía; Esc descarta."
+        if imagePaths.count >= 6 {
+            status = "Máximo 6 capturas. Quita una o envía el lote."
             showWindow()
             return
         }
@@ -153,7 +154,7 @@ final class Model: ObservableObject {
     }
 
     func pickImage() {
-        guard !busy, operation == nil else { showWindow(); return }
+        guard !busy, imagePaths.count < 6 else { showWindow(); return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png]
         panel.allowsMultipleSelection = false
@@ -164,24 +165,35 @@ final class Model: ObservableObject {
     }
 
     private func prepare(_ payload: [String: Any]) {
+        var payload = payload
+        if let op = operation { payload["operation"] = op }
         request(payload) { reply in
             self.capturing = false
-            guard let reply = reply, reply.ok else { self.showWindow(); return }
+            guard let reply = reply, reply.ok else {
+                if reply == nil { self.clearPrepared() }
+                else if let state = reply?.state, state != "preparing" { self.clearPrepared() }
+                else if let paths = reply?.imagePaths { self.imagePaths = paths; self.imagePath = paths.last }
+                self.showWindow()
+                return
+            }
             if reply.state == "cancelled" {
                 self.status = "Captura cancelada; no se envió nada."
                 return
             }
-            guard let op = reply.operation, let path = reply.imagePath,
-                  let image = NSImage(contentsOfFile: path) else {
-                self.status = "No se pudo mostrar la imagen. No se enviará."
+            guard let op = reply.operation, let paths = reply.imagePaths, !paths.isEmpty else {
+                self.status = "No se pudo preparar la captura. No se enviará."
                 self.showWindow()
-                if let op = reply.operation { self.discardOperation(op) }
                 return
             }
-            self.text = ""
+            if self.operation != op { self.text = "" }
             self.operation = op
-            self.imagePath = path
-            self.image = image
+            self.imagePaths = paths
+            self.imagePath = paths.last
+            if reply.state == "capture_cancelled" {
+                self.status = "Selección cancelada; se conservan \(paths.count) capturas."
+                self.showWindow()
+                return
+            }
             self.status = "Enter envía · Esc descarta · Claude listo y prompt vacío"
             self.showWindow()
             self.refresh()
@@ -213,7 +225,28 @@ final class Model: ObservableObject {
         }
     }
 
-    private func clearPrepared() { operation = nil; image = nil; imagePath = nil }
+    private func clearPrepared() { operation = nil; imagePaths = []; imagePath = nil }
+
+    func removeImage(_ index: Int) {
+        guard !busy, let op = operation else { return }
+        request(["action": "remove", "operation": op, "index": index]) { reply in
+            guard let reply = reply, reply.ok else {
+                if reply == nil { self.clearPrepared() }
+                else if let state = reply?.state, state != "preparing" { self.clearPrepared() }
+                else if let paths = reply?.imagePaths { self.imagePaths = paths; self.imagePath = paths.last }
+                return
+            }
+            if reply.state == "cancelled" {
+                self.clearPrepared()
+                self.text = ""
+                self.status = "Lote descartado; ⌘⌃7 inicia otro."
+            } else if let paths = reply.imagePaths {
+                self.imagePaths = paths
+                self.imagePath = paths.last
+                self.status = "Enter envía el lote · Esc descarta todo"
+            }
+        }
+    }
 
     private func discardOperation(_ op: String, completion: (() -> Void)? = nil) {
         request(["action": "cancel", "operation": op]) { reply in
@@ -373,8 +406,21 @@ struct ContentView: View {
                 Button(action: model.refresh) { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.borderless).help("Actualizar sesiones").disabled(model.busy)
             }
+            if !model.imagePaths.isEmpty {
+                HStack(spacing: 6) {
+                    Text("\(model.imagePaths.count)/6 capturas").font(.caption).foregroundStyle(.secondary)
+                    ForEach(Array(model.imagePaths.indices), id: \.self) { index in
+                        Button("\(index + 1) ×") { model.removeImage(index) }
+                            .buttonStyle(.borderless).help("Quitar captura \(index + 1)").disabled(model.busy)
+                    }
+                    Spacer()
+                    Button(action: model.capture) { Image(systemName: "plus") }
+                        .buttonStyle(.borderless).help("Añadir captura · ⌘⌃7")
+                        .disabled(model.busy || model.imagePaths.count >= 6)
+                }
+            }
             HStack(spacing: 8) {
-                TextField("Texto opcional — Enter envía", text: $model.text)
+                TextField("Texto opcional — Enter envía el lote", text: $model.text)
                     .textFieldStyle(.roundedBorder).focused($textFocused)
                     .onSubmit { model.submit() }.disabled(model.busy || model.operation == nil)
                 Button(action: model.submit) { Image(systemName: "paperplane.fill") }
@@ -430,7 +476,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.autoenablesItems = false
         add("Capturar región  ⌘⌃7", #selector(captureRegion), enabled: !model.busy)
         add("Mostrar popup", #selector(showPopup))
-        add("Elegir PNG…", #selector(choosePNG), enabled: !model.busy && model.operation == nil)
+        add("Elegir PNG…", #selector(choosePNG), enabled: !model.busy && model.imagePaths.count < 6)
         add("Ver captura en Finder", #selector(revealCapture), enabled: model.operation != nil)
         menu.addItem(.separator())
         let status = NSMenuItem(title: model.hotKeyStatus, action: nil, keyEquivalent: "")

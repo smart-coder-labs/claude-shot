@@ -20,6 +20,8 @@ Ajuste de atajo solicitado posteriormente: **Command + Control + 7 (⌘⌃7)**, 
 
 UX mínima posterior solicitada: ⌘⌃7 activa directamente selección de región; después aparece únicamente un popup compacto de sesión de Claude y texto. Enter/avión envía y oculta el popup; Esc descarta. App accessory en barra de menús, sin ventana de inicio ni vista previa grande. La pulsación autoriza capturar, no transmitir; el envío requiere Enter/avión posterior. Si hay captura pendiente se conserva en lugar de sobrescribirla. Este ajuste sustituye el comportamiento anterior del atajo que solo abría la ventana; no habilita SSH ni P3 automático.
 
+Ampliación solicitada posteriormente: lote de hasta 6 capturas (20 MiB cada una, 60 MiB agregados). Repetir ⌘⌃7 o + añade al lote sin perder texto; controles numerados permiten quitar imágenes. Enter envía todas las rutas en un único mensaje/turno, con un solo Enter final. Esc durante una captura añadida conserva las anteriores; Esc en popup descarta el lote. CLI acepta --image repetido o capture --count N. Implementado y probado con adaptadores simulados; lectura visual multiimagen real aún pendiente. Esta ampliación sustituye el límite original de una imagen por envío, no declara validado un adjunto nativo.
+
 ## 2. Alcance y decisiones
 
 ### MVP

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import re
 import stat
 import struct
 import subprocess
@@ -16,6 +17,9 @@ import unicodedata
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / '.claude-shot'
 MAX_IMAGE = 20 * 1024 * 1024
+MAX_IMAGES = 6
+MAX_BATCH = 60 * 1024 * 1024
+IMAGE_NAME = re.compile(r'image(?:-[0-9a-f]{16})?\.png')
 
 
 class ShotError(Exception):
@@ -181,23 +185,76 @@ def validate_png(data):
         raise ShotError('Filtros PNG inválidos.')
 
 
-def stage_image(source, op):
+def stage_image(source, op, name='image.png'):
+    if not IMAGE_NAME.fullmatch(name):
+        raise ShotError('Nombre de imagen inválido.')
     data = read_image(source)
-    path = op / 'image.png'
+    path = op / name
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'wb') as stream:
         stream.write(data)
     return path
 
 
+def image_paths(op):
+    manifest = op / 'images.json'
+    if manifest.is_symlink():
+        raise ShotError('Lista de imágenes no puede ser un enlace.')
+    if not manifest.exists():
+        return [op / 'image.png'] if (op / 'image.png').exists() else []
+    fd = os.open(manifest, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd) as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 4096:
+            raise ShotError('Lista de imágenes inválida.')
+        names = json.load(stream)
+    if (not isinstance(names, list) or len(names) > MAX_IMAGES or
+            any(not isinstance(n, str) or not IMAGE_NAME.fullmatch(n) for n in names) or
+            len(set(names)) != len(names)):
+        raise ShotError('Lista de imágenes inválida.')
+    return [op / name for name in names]
+
+
+def append_image(source, op):
+    images = image_paths(op)
+    if len(images) >= MAX_IMAGES:
+        raise ShotError('Máximo 6 capturas por mensaje.')
+    name = 'image.png' if not images and not (op / 'image.png').exists() else 'image-' + secrets.token_hex(8) + '.png'
+    path = stage_image(source, op, name)
+    try:
+        sizes = []
+        for item in images + [path]:
+            info = item.lstat()
+            if not stat.S_ISREG(info.st_mode):
+                raise ShotError('Imagen no regular en el lote.')
+            sizes.append(info.st_size)
+        if sum(sizes) > MAX_BATCH:
+            raise ShotError('El lote supera 60 MiB; quita una captura.')
+        atomic_json(op / 'images.json', [p.name for p in images + [path]])
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return images + [path]
+
+
+def discard_images(op):
+    for path in op.iterdir():
+        if IMAGE_NAME.fullmatch(path.name) or path.name in ('capture.png', 'images.json'):
+            path.unlink()
+
+
 def message(image, text):
+    images = [image] if isinstance(image, (str, Path)) else list(image)
+    if not 1 <= len(images) <= MAX_IMAGES:
+        raise ShotError('El mensaje requiere entre 1 y 6 imágenes.')
     if len(text) > 8000:
         raise ShotError('Texto demasiado largo (máximo 8000 caracteres).')
     # No enviar saltos ni secuencias de control al terminal; multilínea pendiente.
-    if any(ord(c) < 32 or 127 <= ord(c) <= 159 or c in '\u2028\u2029' for c in str(image) + text):
+    if any(ord(c) < 32 or 127 <= ord(c) <= 159 or c in '\u2028\u2029' for c in ''.join(map(str, images)) + text):
         raise ShotError('Este prototipo solo admite texto de una línea, sin caracteres de control.')
-    reference = json.dumps(str(image), ensure_ascii=True)
-    return reference + ' ' + (text if text else 'Describe lo que ves.')
+    reference = ' '.join(json.dumps(str(path), ensure_ascii=True) for path in images)
+    default = 'Describe lo que ves.' if len(images) == 1 else 'Describe las imágenes.'
+    return reference + ' ' + (text if text else default)
 
 
 @contextmanager
