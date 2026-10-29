@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+APP="$ROOT/build/Claude Shot.app"
+CACHE="$ROOT/build/module-cache"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$CACHE"
+if [ ! -x "$ROOT/.venv/bin/python" ]; then
+  printf '%s\n' 'Falta .venv; sigue README.md antes de construir.' >&2
+  exit 1
+fi
+# Cachés y producto de compilación confinados al repositorio.
+CLANG_MODULE_CACHE_PATH="$CACHE" SWIFT_MODULECACHE_PATH="$CACHE" \
+  /usr/bin/swiftc -swift-version 5 -parse-as-library -target "$(uname -m)-apple-macosx14.0" \
+  -module-cache-path "$CACHE" -framework SwiftUI -framework AppKit -framework Carbon \
+  "$ROOT/macos/ClaudeShot.swift" -o "$APP/Contents/MacOS/ClaudeShot"
+printf '%s\n' "$ROOT" > "$APP/Contents/Resources/repository-path.txt"
+/usr/bin/plutil -create xml1 "$APP/Contents/Info.plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c 'Clear dict' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :CFBundleExecutable string ClaudeShot' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :CFBundleIdentifier string local.claude-shot.desktop' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :CFBundleName string Claude Shot' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :CFBundlePackageType string APPL' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :CFBundleShortVersionString string 0.1.0' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :LSMinimumSystemVersion string 14.0' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :NSHighResolutionCapable bool true' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Add :NSAppleEventsUsageDescription string Claude Shot solicita acceso a iTerm2 para enviar al panel que elijas.' "$APP/Contents/Info.plist"
+/usr/bin/codesign --force --sign - "$APP"
+printf '\nApp construida (sin abrir): %s\n' "$APP"
+printf 'Para probar: open "%s"\n' "$APP"

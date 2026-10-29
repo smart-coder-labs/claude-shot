@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+  <title id="title">Claude Shot — macOS screenshots for Claude Code in iTerm2</title>
+  <desc id="desc">Capture a region, choose an existing local Claude Code session, and send with Enter. Native macOS app. No clipboard.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#122c35"/></linearGradient>
+    <linearGradient id="accent"><stop stop-color="#70efc5"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#9ae6de" stroke-opacity=".05"/></pattern>
+  </defs>
+  <rect width="1600" height="520" rx="28" fill="url(#bg)"/>
+  <rect width="1600" height="520" rx="28" fill="url(#grid)"/>
+  <g transform="translate(88 91)" fill="none" stroke="url(#accent)" stroke-width="9" stroke-linecap="round"><path d="M0 44V0h44M118 0h44v44M162 118v44h-44M44 162H0v-44"/><path d="m55 90 22 22 40-52" stroke-width="8"/></g>
+  <text x="295" y="155" fill="#f4f8fc" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="78" font-weight="750">Claude Shot</text>
+  <text x="298" y="213" fill="#b5ccd6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="30">Screenshots for Claude Code. Without the clipboard.</text>
+  <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">
+    <text x="92" y="336" fill="#7de8ce" font-size="20" font-weight="650" letter-spacing="3">CAPTURE</text>
+    <text x="360" y="336" fill="#7de8ce" font-size="20" font-weight="650" letter-spacing="3">CHOOSE SESSION</text>
+    <text x="740" y="336" fill="#7de8ce" font-size="20" font-weight="650" letter-spacing="3">ENTER TO SEND</text>
+    <path d="M256 328h65m-11-8 11 8-11 8M636 328h65m-11-8 11 8-11 8" stroke="#49747f" stroke-width="3" fill="none"/>
+    <text x="92" y="432" fill="#8faebc" font-size="22">Native macOS · iTerm2 · Existing local conversations</text>
+    <rect x="1170" y="300" width="338" height="112" rx="18" fill="#132d37" stroke="#42646e"/>
+    <text x="1339" y="370" text-anchor="middle" fill="#e8fcf7" font-size="42" font-weight="600">⌘  ⌃  7</text>
+  </g>
+</svg>

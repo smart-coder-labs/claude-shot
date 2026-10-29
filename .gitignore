@@ -1,0 +1,17 @@
+# Instrumentación privada y artefactos de Python
+.spike-runtime/
+.venv/
+build/
+.claude-shot/
+__pycache__/
+*.py[cod]
+.DS_Store
+# Descargas oficiales de consulta: fuentes enlazadas, no redistribuidas.
+docs/spike-evidence/*.html
+docs/spike-evidence/*.md
+!docs/spike-evidence/README.md
+docs/spike-evidence/*.swift
+docs/spike-evidence/*.m
+# Recibos y texto de ensayos pertenecen al Mac, no al repo público.
+docs/spike-evidence/*/receipt.json
+docs/spike-evidence/*/message.txt

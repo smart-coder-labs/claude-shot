@@ -1,0 +1,35 @@
+name: Tests and macOS build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-prototype:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install repository-local dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r requirements.lock
+      - name: Test simulated adapters (no real capture or terminal delivery)
+        run: .venv/bin/python -B -m unittest discover -s tests/unit -v
+      - name: Check documentation links and assets
+        run: .venv/bin/python -B scripts/check-docs.py
+      - name: Build native app without opening it
+        run: ./scripts/build-app
+      - name: Verify bundle
+        run: |
+          codesign --verify --deep --strict 'build/Claude Shot.app'
+          plutil -lint 'build/Claude Shot.app/Contents/Info.plist'
+          git diff --check

@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a local macOS, iTerm2, or Claude Code integration problem.
+title: '[Bug]: '
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: macOS, iTerm2, Claude Code, Python, and app commit. No secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Use a disposable local session. Do not include prompt contents or private screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+      description: Include sanitized error/state, not runtime files or credentials.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed private image content, prompts, credentials, and runtime files.
+          required: true

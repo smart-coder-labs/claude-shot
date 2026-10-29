@@ -1,0 +1,17 @@
+{
+  "description": "Native macOS screenshot tool for existing local Claude Code sessions in iTerm2. Capture with Command+Control+7, choose a session, and send with Enter. No clipboard.",
+  "topics": [
+    "claude-code",
+    "macos",
+    "iterm2",
+    "screenshots",
+    "screen-capture",
+    "developer-tools",
+    "swiftui",
+    "swift",
+    "python",
+    "terminal",
+    "productivity",
+    "menu-bar-app"
+  ]
+}

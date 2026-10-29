@@ -4,7 +4,21 @@
 
 Herramienta para macOS que permita capturar una región de pantalla, elegir una sesión abierta de Claude Code en iTerm2 —local o conectada mediante SSH directo—, añadir texto opcional y enviar la imagen sin copiar ni pegar.
 
-Estado: plan propuesto, sin validación técnica ni implementación. Las APIs y mecanismos de adjunto descritos como candidatos deben verificarse contra las versiones instaladas y su documentación oficial.
+Estado original: plan propuesto. Se realizó spike local y se implementó un prototipo CLI con alcance revisado; consultar `docs/spike-results.md` y `README.md` para evidencia y pendientes. Las APIs y mecanismos de adjunto descritos como candidatos deben verificarse contra las versiones instaladas y su documentación oficial.
+
+### Acuerdo posterior al spike — 2026-10-28
+
+El usuario aceptó explícitamente **lectura visual por ruta local** en la conversación interactiva elegida y **sustituir P3 automático por confirmación humana por envío**, además de autorizar instalar el SDK oficial de iTerm2 en `.venv` dentro del repositorio. Se acepta el riesgo de borrador/diálogo/carrera si la confirmación no refleja el estado real. No se declara P3 resuelto ni estado `ready` detectado. El gate original sigue sin cumplirse para el MVP completo; este acuerdo habilita únicamente un prototipo local supervisado con alcance reducido.
+
+El prototipo descubre Claude por proceso/TTY e ID de panel, sin exigir wrapper; usa texto y Enter separados con supresión de broadcast. No incluye SSH, atajo global, frontend gráfico ni texto multilínea. La entrega real con el SDK nuevo y la captura siguen pendientes de aceptación manual. No extender esta excepción al MVP remoto ni a envío desatendido sin otro acuerdo. El resto del documento conserva el diseño y criterios originales para referencia.
+
+Ajuste de UX posterior, solicitado por el usuario tras probar envío y captura: seleccionar destino, capturar directamente si corresponde y pulsar Enter en el campo de texto inicia el envío, sin escribir ENVIAR ni preguntar de nuevo por la captura. Ctrl+C antes de escribir en el destino cancela. El usuario sigue siendo responsable de comprobar disponibilidad y prompt vacío. La lista muestra el título de la pestaña de iTerm2 como etiqueta, nunca como identidad ni prueba de proceso. No se elimina revalidación, supresión de broadcast, bloqueo ni tratamiento de entregas inciertas.
+
+Continuación local de escritorio: se construye una app nativa SwiftUI/AppKit usando el Swift ya disponible, en lugar de instalar Hammerspoon. Selector, PNG/captura, vista previa, texto y Enter/Enviar reutilizan el controlador mediante JSON por stdin/stdout. Atajo global opcional, desactivado por defecto y activable solo por el usuario en tiempo de ejecución; abre la ventana, no captura. Producto y cachés dentro del repositorio, sin instalación global. Su compilación no acredita permisos ni funcionamiento gráfico: aceptación manual pendiente. No habilita la Fase 3 SSH ni declara completo el gate original.
+
+Ajuste de atajo solicitado posteriormente: **Command + Control + 7 (⌘⌃7)**, registrado automáticamente al abrir la app en lugar de activación opt-in y de ⌘⇧7. Puede desactivarse en el menú hasta el siguiente arranque. El usuario autorizó esa activación y se verificó registro real código 0; no se tomaron capturas ni enviaron mensajes. No se modifican atajos del sistema ni se crea autoarranque. La pulsación física y reapertura de ventana siguen pendientes de aceptación.
+
+UX mínima posterior solicitada: ⌘⌃7 activa directamente selección de región; después aparece únicamente un popup compacto de sesión de Claude y texto. Enter/avión envía y oculta el popup; Esc descarta. App accessory en barra de menús, sin ventana de inicio ni vista previa grande. La pulsación autoriza capturar, no transmitir; el envío requiere Enter/avión posterior. Si hay captura pendiente se conserva en lugar de sobrescribirla. Este ajuste sustituye el comportamiento anterior del atajo que solo abría la ventana; no habilita SSH ni P3 automático.
 
 ## 2. Alcance y decisiones
 

@@ -1,0 +1,4 @@
+# Probado en este Mac con Python 3.15.0
+iterm2==2.30
+protobuf==7.36.2
+websockets==17.3

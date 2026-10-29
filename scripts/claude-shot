@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+if [ ! -x "$ROOT/.venv/bin/python" ]; then
+  printf '%s\n' 'Falta .venv. Sigue la instalación documentada en README.md.' >&2
+  exit 1
+fi
+exec "$ROOT/.venv/bin/python" -B "$ROOT/scripts/claude-shot.py" "$@"
