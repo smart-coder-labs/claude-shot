@@ -9,7 +9,10 @@ Compilación/firma y tests del controlador comprobados. El registro real de ⌘�
 - [ ] ⌘⌃7 abre directamente selección de región desde otra aplicación, sin elegir sesión primero.
 - [ ] Esc durante selección cancela sin popup ni imagen enviada.
 - [ ] Una segunda pulsación durante selección no muestra la app sobre la captura.
-- [ ] Captura pendiente: repetir atajo o + añade al lote en orden, sin sobrescribir ni perder texto (máximo 6).
+- [ ] ⌘⌃7 con captura pendiente: solo muestra el popup, sin añadir ni sobrescribir.
+- [ ] ⌘⌃⇧7 inicia/amplía el lote; + también añade en orden sin perder texto (máximo 6).
+- [ ] Enter envía y cierra el lote; siguiente captura comienza otro, sin incluir imágenes ya enviadas.
+- [ ] Ambos atajos se desactivan/activan desde menú; conflicto en uno se informa sin duplicar registros.
 - [ ] Esc al añadir captura conserva las previas y vuelve al popup; números × eliminan la imagen correcta.
 - [ ] Quitar la última imagen cancela el lote y deshabilita envío; Esc en popup elimina todas.
 - [ ] Límite de 6 imágenes/60 MiB se informa sin perder las anteriores.

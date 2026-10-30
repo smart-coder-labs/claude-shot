@@ -304,6 +304,10 @@ Con aprobación explícita del propietario se generó/importó un certificado de
 
 La app se recompiló y verificó con la nueva identidad, cuyo requisito designado referencia bundle ID y certificado. Dos ejecutables de prueba diferentes se firmaron sin ejecutarlos: distinto hash de código, idéntico requisito designado entre ellos y la app. **64 tests pasan**, incluidos 8 de política de firma, configuración privada y rechazo sin fallback. No se forzó cierre/reinicio de la app, no hubo capturas ni mensajes nuevos. **Pendiente: salir/reabrir la app, autorizar la identidad nueva y verificar captura real, incluida persistencia tras recompilar**. [Procedimiento y límites](local-signing.md).
 
+### Atajo separado para lotes
+
+A petición del usuario, ⌘⌃7 vuelve a captura individual: con una operación pendiente solo muestra popup. El nuevo ⌘⌃⇧7 inicia/amplía un lote, como +. Enter en el campo envía un único mensaje y cierra el lote; no hay otro Enter de confirmación ni se reutilizan imágenes enviadas. Esc en popup descarta todo; Esc durante una selección añadida conserva las previas. Carbon distingue ambos eventos por firma/ID y modificadores exactos, libera ambos registros al desactivar/salir e intenta rollback si el segundo atajo está ocupado. Compilación y pruebas unitarias verificadas, sin pulsaciones físicas, capturas o envíos nuevos. Comportamiento físico de ambos atajos pendiente de prueba manual.
+
 ## Decisiones originales / alternativas (histórico)
 
 Este apartado conserva las opciones anteriores al acuerdo local supervisado. La autorización y aceptación de lectura por ruta se actualizaron en el apartado precedente; SSH y UX definitiva siguen pendientes.

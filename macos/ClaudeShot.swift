@@ -49,6 +49,7 @@ final class Model: ObservableObject {
     private var capturing = false
     private let root: URL?
     private var hotKey: EventHotKeyRef?
+    private var batchHotKey: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
 
     init() {
@@ -134,6 +135,16 @@ final class Model: ObservableObject {
     }
 
     func capture() {
+        guard !busy else { return }
+        if operation != nil {
+            status = "Captura pendiente · ⌘⌃⇧7 añade al lote · Enter envía"
+            showWindow()
+            return
+        }
+        addCapture()
+    }
+
+    func addCapture() {
         if busy {
             if !capturing { showWindow() }
             return
@@ -342,23 +353,25 @@ final class Model: ObservableObject {
         } catch { /* Un fallo de diagnóstico no cambia el registro del atajo. */ }
     }
 
-    func hotKeyPressed() {
-        recordHotKey("pressed", code: noErr)
-        capture()
+    func hotKeyPressed(batch: Bool) {
+        recordHotKey(batch ? "batch_pressed" : "pressed", code: noErr)
+        if batch { addCapture() } else { capture() }
     }
 
     // Activado al arrancar por petición del usuario, sin preferencias del sistema.
     func toggleHotKey() {
-        if let key = hotKey {
-            let result = UnregisterEventHotKey(key)
-            guard result == noErr else {
-                hotKeyStatus = "No se pudo desactivar ⌘⌃7 (código \(result))."
-                return
+        if hotKey != nil || batchHotKey != nil {
+            func unregister(_ ref: inout EventHotKeyRef?) -> OSStatus {
+                guard let key = ref else { return noErr }
+                let result = UnregisterEventHotKey(key)
+                if result == noErr { ref = nil }
+                return result
             }
-            hotKey = nil
-            hotKeyEnabled = false
-            hotKeyStatus = "⌘⌃7 desactivado hasta el próximo arranque."
-            recordHotKey("disabled", code: noErr)
+            let singleResult = unregister(&hotKey)
+            let batchResult = unregister(&batchHotKey)
+            hotKeyEnabled = hotKey != nil || batchHotKey != nil
+            hotKeyStatus = hotKeyEnabled ? "Algún atajo sigue activo; reintenta desactivar." : "Atajos desactivados hasta el próximo arranque."
+            recordHotKey(hotKeyEnabled ? "disable_failed" : "disabled", code: singleResult != noErr ? singleResult : batchResult)
         } else {
             enableHotKey()
         }
@@ -368,8 +381,15 @@ final class Model: ObservableObject {
         guard !hotKeyEnabled else { return }
         if eventHandler == nil {
             var type = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-            let result = InstallEventHandler(GetApplicationEventTarget(), { _, _, _ in
-                DispatchQueue.main.async { Model.shared.hotKeyPressed() }
+            let result = InstallEventHandler(GetApplicationEventTarget(), { _, event, _ in
+                guard let event = event else { return OSStatus(eventNotHandledErr) }
+                var identifier = EventHotKeyID()
+                let result = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &identifier)
+                guard result == noErr, identifier.signature == 0x43534854,
+                      identifier.id == 1 || identifier.id == 2 else { return OSStatus(eventNotHandledErr) }
+                let batch = identifier.id == 2
+                DispatchQueue.main.async { Model.shared.hotKeyPressed(batch: batch) }
                 return noErr
             }, 1, &type, nil, &eventHandler)
             guard result == noErr else {
@@ -381,14 +401,19 @@ final class Model: ObservableObject {
         let result = RegisterEventHotKey(UInt32(kVK_ANSI_7), UInt32(cmdKey | controlKey),
                                         EventHotKeyID(signature: 0x43534854, id: 1),
                                         GetApplicationEventTarget(), 0, &hotKey)
-        hotKeyEnabled = result == noErr
-        recordHotKey(hotKeyEnabled ? "registered" : "registration_failed", code: result)
-        if hotKeyEnabled {
-            hotKeyStatus = "⌘⌃7 activo · captura una región."
-        } else {
-            hotKey = nil
-            hotKeyStatus = "No se pudo registrar ⌘⌃7 (código \(result)); puede estar ocupado. Reintenta desde el menú."
+        var statusCode = result
+        if result == noErr {
+            statusCode = RegisterEventHotKey(UInt32(kVK_ANSI_7), UInt32(cmdKey | controlKey | shiftKey),
+                EventHotKeyID(signature: 0x43534854, id: 2), GetApplicationEventTarget(), 0, &batchHotKey)
+            if statusCode != noErr, let key = hotKey {
+                if UnregisterEventHotKey(key) == noErr { hotKey = nil }
+            }
         }
+        hotKeyEnabled = hotKey != nil || batchHotKey != nil
+        let complete = result == noErr && statusCode == noErr
+        recordHotKey(complete ? "registered" : "registration_failed", code: statusCode)
+        hotKeyStatus = complete ? "⌘⌃7 individual · ⌘⌃⇧7 lote · Enter envía y cierra" :
+            "No se pudieron activar ambos atajos (código \(statusCode)); desactiva y reintenta desde el menú."
     }
 }
 
@@ -414,8 +439,8 @@ struct ContentView: View {
                             .buttonStyle(.borderless).help("Quitar captura \(index + 1)").disabled(model.busy)
                     }
                     Spacer()
-                    Button(action: model.capture) { Image(systemName: "plus") }
-                        .buttonStyle(.borderless).help("Añadir captura · ⌘⌃7")
+                    Button(action: model.addCapture) { Image(systemName: "plus") }
+                        .buttonStyle(.borderless).help("Añadir al lote · ⌘⌃⇧7")
                         .disabled(model.busy || model.imagePaths.count >= 6)
                 }
             }
@@ -475,6 +500,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.autoenablesItems = false
         add("Capturar región  ⌘⌃7", #selector(captureRegion), enabled: !model.busy)
+        add("Añadir al lote  ⌘⌃⇧7", #selector(captureBatch), enabled: !model.busy && model.imagePaths.count < 6)
         add("Mostrar popup", #selector(showPopup))
         add("Elegir PNG…", #selector(choosePNG), enabled: !model.busy && model.imagePaths.count < 6)
         add("Ver captura en Finder", #selector(revealCapture), enabled: model.operation != nil)
@@ -482,7 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let status = NSMenuItem(title: model.hotKeyStatus, action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
-        add(model.hotKeyEnabled ? "Desactivar atajo" : "Reintentar activar atajo", #selector(toggleShortcut))
+        add(model.hotKeyEnabled ? "Desactivar atajos" : "Reintentar activar atajos", #selector(toggleShortcut))
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Salir de Claude Shot", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         quit.target = NSApplication.shared
@@ -490,6 +516,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func captureRegion() { Model.shared.capture() }
+    @objc private func captureBatch() { Model.shared.addCapture() }
     @objc private func showPopup() { Model.shared.showWindow() }
     @objc private func choosePNG() { Model.shared.pickImage() }
     @objc private func revealCapture() { Model.shared.revealImage() }
@@ -520,7 +547,7 @@ struct ClaudeShotApp: App {
             .windowResizability(.contentSize)
             .commands {
                 CommandGroup(after: .appInfo) {
-                    Button(model.hotKeyEnabled ? "Desactivar atajo global ⌘⌃7" : "Activar atajo global ⌘⌃7") {
+                    Button(model.hotKeyEnabled ? "Desactivar atajos globales" : "Activar atajos globales") {
                         model.toggleHotKey()
                     }
                 }

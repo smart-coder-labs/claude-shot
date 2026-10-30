@@ -22,6 +22,8 @@ UX mínima posterior solicitada: ⌘⌃7 activa directamente selección de regi�
 
 Ampliación solicitada posteriormente: lote de hasta 6 capturas (20 MiB cada una, 60 MiB agregados). Repetir ⌘⌃7 o + añade al lote sin perder texto; controles numerados permiten quitar imágenes. Enter envía todas las rutas en un único mensaje/turno, con un solo Enter final. Esc durante una captura añadida conserva las anteriores; Esc en popup descarta el lote. CLI acepta --image repetido o capture --count N. Implementado y probado con adaptadores simulados; lectura visual multiimagen real aún pendiente. Esta ampliación sustituye el límite original de una imagen por envío, no declara validado un adjunto nativo.
 
+Ajuste posterior de atajos solicitado: ⌘⌃7 es individual y, si hay una operación pendiente, solo la muestra; ⌘⌃⇧7 inicia/amplía el lote. + también añade. Enter envía en un turno y cierra el lote; la captura siguiente comienza una operación nueva. Sustituye la adición por repetición de ⌘⌃7 descrita arriba. Ambos atajos se registran al abrir y se liberan al desactivar/salir; prueba física pendiente.
+
 ## 2. Alcance y decisiones
 
 ### MVP

@@ -59,7 +59,7 @@ The tab title makes sessions easier to recognize. Underneath, routing uses the p
 | ◉ | **Keep your conversation** | Send to an already-open local Claude Code process in iTerm2. |
 | ↗ | **Choose the right session** | Recognize tab titles, with TTY/PID to distinguish similar sessions. |
 | ↵ | **Send with Enter** | Add optional single-line text in a small popup; no `ENVIAR` confirmation. |
-| ▤ | **Send a capture batch** | Repeat the shortcut or press + to collect up to 6 images; Enter sends all paths in one message. |
+| ▤ | **Send a capture batch** | Use ⌘⌃⇧7 or + to collect up to 6 images; Enter sends all paths in one message and closes the batch. |
 | ⎋ | **Cancel without terminal edits** | Escape cancels region selection or discards the prepared image. |
 | ◇ | **Leave the clipboard alone** | Store a private PNG and reference it by path instead of clipboard paste. |
 | ⛨ | **Avoid accidental duplication** | Per-session locking, destination revalidation, broadcast suppression, and no automatic delivery retries. |
@@ -97,11 +97,11 @@ Optional text + ↵     Send once and hide the popup
 ```
 
 1. Open **Claude Code locally in iTerm2**. Leave it idle with an empty prompt.
-2. Press **Command + Control + 7** and select a region. Repeat the shortcut or press **+** in the popup to add more (up to 6). Escape during a selection cancels only that selection and preserves earlier captures.
+2. Press **Command + Control + 7** and select a region. Use **Command + Control + Shift + 7** to start a batch or add more, or press **+** in the popup (up to 6). Escape during a selection cancels only that selection and preserves earlier captures.
 3. Remove an unwanted image with its numbered **×** control. Choose Claude, type optional text, and press **Enter** or the paper-plane button to send the entire batch in **one message**.
 4. Check the response in Claude. An iTerm2 delivery acknowledgment is not proof of visual interpretation.
 
-Capturing does **not** transmit the image. Enter in the popup does. Empty text still sends, with a default request to describe the image. New captures append to the pending batch, preserving order and typed text. Escape in the popup discards the whole unsent batch. Limits: 6 images, 20 MiB per PNG, 60 MiB total. Visual interpretation of multiple files still needs a real acceptance test; automated tests verify the batch protocol, not model behavior.
+Capturing does **not** transmit the image. Enter in the popup does. Empty text still sends, with a default request to describe the image. **⌘⌃7 is for individual capture**: if an image/batch is pending, it only shows the popup. **⌘⌃⇧7 adds to the batch**, preserving order and typed text. Enter sends and closes it; the next capture starts a fresh operation. Escape in the popup discards the whole unsent batch. Limits: 6 images, 20 MiB per PNG, 60 MiB total. Visual interpretation of multiple files still needs a real acceptance test; automated tests verify the batch protocol, not model behavior.
 
 macOS or iTerm2 may ask for capture or Automation authorization. Decide explicitly whether to grant it; the app does not enable permissions, change system settings, or answer Claude permission dialogs for you. If Screen Recording already appears enabled but macOS asks again after a rebuild, the ad-hoc signing identity may have changed. [Stable local signing](docs/local-signing.md) addresses identity changes, not permission grants; certificate installation/trust requires separate, explicit owner consent.
 
